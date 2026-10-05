@@ -32,7 +32,7 @@ test("multi-slot bidder pays different prices per slot", () => {
   assert.equal(r.o70.payment, 50); // others paid the highest losing-without-them bid
 });
 
-test("ties go to whoever bid first", () => {
+test("ties go to the lowest tie-break number", () => {
   const bids = ["a", "b", "c", "d", "e", "f"].map((n, i) => ({ bidder: n, amounts: [10], tieBreak: i }));
   const r = byBidder(runAuction(bids, S));
   assert.equal(r.f.guests, 0);

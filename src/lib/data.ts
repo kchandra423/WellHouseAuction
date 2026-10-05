@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { db } from "./db";
 import { runAuction, trimToBudget } from "./auction";
 import { SLOTS_PER_MEAL, STARTING_BALANCE, type MealType } from "./config";
@@ -226,7 +227,7 @@ async function clearMeal(mealId: string) {
       return;
     }
 
-    const bids = await tx`select email, amounts, created_at from bids where meal_id = ${mealId}`;
+    const bids = await tx`select email, amounts from bids where meal_id = ${mealId}`;
     const prepared = [];
     for (const b of bids) {
       const [{ spent }] = await tx`
@@ -238,7 +239,7 @@ async function clearMeal(mealId: string) {
         bidder: b.email as string,
         amounts,
         trimmed: amounts.join() !== [...b.amounts].sort((x: number, y: number) => y - x).join(),
-        tieBreak: new Date(b.created_at).getTime(),
+        tieBreak: randomInt(2 ** 47), // ties are broken randomly, drawn fresh when the auction runs
       });
     }
 

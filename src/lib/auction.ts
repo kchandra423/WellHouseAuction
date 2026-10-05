@@ -18,7 +18,7 @@
 export type AuctionBid = {
   bidder: string;
   amounts: number[]; // cents, any order
-  tieBreak: number; // lower wins ties (we use the time of first bid)
+  tieBreak: number; // lower wins ties (we use a random number)
 };
 
 export type AuctionResult = {

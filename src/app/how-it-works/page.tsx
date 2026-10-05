@@ -54,7 +54,7 @@ export default function HowItWorks() {
             If you bid on several meals and win earlier ones, you might not have enough left for a later one. If that happens,
             your lowest bids on the later meal are dropped until it fits.
           </li>
-          <li>Ties go to whoever bid first.</li>
+          <li>Ties are broken randomly, so there&apos;s no advantage to bidding early.</li>
           <li>Other residents can&apos;t see your bids. Only the winners&apos; names are shown after bidding closes.</li>
           <li>Leftover Well Dollars don&apos;t carry over to next quarter.</li>
         </ul>
