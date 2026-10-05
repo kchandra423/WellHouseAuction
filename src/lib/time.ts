@@ -1,4 +1,4 @@
-import { addDays, format, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { CLOSE_HOUR, DAYS_AHEAD, MEAL_TYPES, MealType, QUARTERS, TIMEZONE } from "./config";
 
@@ -68,6 +68,12 @@ export function upcomingMeals(now = new Date()): Meal[] {
     for (const type of MEAL_TYPES) meals.push({ id: mealId(date, type), date, type, closesAt: closesAt(date) });
   }
   return meals;
+}
+
+/** Weeks left in the quarter, counting this one. At least 1. */
+export function weeksLeft(quarter: Quarter, now = new Date()) {
+  const days = differenceInCalendarDays(parseISO(quarter.end), parseISO(todayInDorm(now))) + 1;
+  return Math.max(1, Math.ceil(days / 7));
 }
 
 export function isOpen(meal: Meal, now = new Date()) {

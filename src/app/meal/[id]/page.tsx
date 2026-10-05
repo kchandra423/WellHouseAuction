@@ -5,10 +5,10 @@ import { removeBidAction } from "@/app/actions";
 import { BidForm } from "@/components/BidForm";
 import { MealResults } from "@/components/MealResults";
 import { Button, Card, Notice } from "@/components/ui";
-import { clearDueMeals, getBalance, getCancelledMeals, getMyBids, getResults } from "@/lib/data";
+import { clearDueMeals, getBalance, getCancelledMeals, getMyBids, getRecentPrices, getResults } from "@/lib/data";
 import { SLOTS_PER_MEAL } from "@/lib/config";
 import { formatMoney } from "@/lib/money";
-import { closeLabel, isOpen, mealLabel, parseMealId, quarterFor } from "@/lib/time";
+import { closeLabel, isOpen, mealLabel, parseMealId, quarterFor, weeksLeft, type Meal } from "@/lib/time";
 
 export default async function MealPage({ params }: PageProps<"/meal/[id]">) {
   const { id } = await params;
@@ -29,7 +29,7 @@ export default async function MealPage({ params }: PageProps<"/meal/[id]">) {
       {cancelled ? (
         <Notice kind="error">There are no guest spots for this meal. Any bids were refunded.</Notice>
       ) : open ? (
-        <OpenMeal mealId={meal.id} email={email} closes={closeLabel(meal.closesAt)} quarterDate={meal.date} />
+        <OpenMeal meal={meal} email={email} />
       ) : (
         <ClosedMeal mealId={meal.id} email={email} />
       )}
@@ -37,32 +37,31 @@ export default async function MealPage({ params }: PageProps<"/meal/[id]">) {
   );
 }
 
-async function OpenMeal({ mealId, email, closes, quarterDate }: { mealId: string; email: string; closes: string; quarterDate: string }) {
-  const [balance, bids] = await Promise.all([getBalance(email, quarterFor(quarterDate)!), getMyBids(email)]);
-  const existing = bids.get(mealId) ?? [];
+async function OpenMeal({ meal, email }: { meal: Meal; email: string }) {
+  const quarter = quarterFor(meal.date)!;
+  const [balance, bids, history] = await Promise.all([getBalance(email, quarter), getMyBids(email), getRecentPrices(meal.type)]);
+  const existing = bids.get(meal.id) ?? [];
+  const closes = closeLabel(meal.closesAt);
   return (
     <>
       <p className="text-neutral-600">
-        Bidding closes <strong>{closes}</strong>. You can change your bid as many times as you want until then.
+        Bidding closes <strong>{closes}</strong>. You can change your bid until then.{" "}
+        <Link href="/how-it-works" className="underline">How it works</Link>
       </p>
-      <Card className="space-y-2 bg-blue-50 text-sm text-blue-950">
-        <p className="font-medium">How much should I bid?</p>
-        <p>
-          Enter the <strong>most you&apos;d honestly pay</strong> for each guest. You&apos;ll never pay more than that, and
-          usually you&apos;ll pay less.
-        </p>
-        <p>
-          There&apos;s no trick: bidding exactly what it&apos;s worth to you is always your best move. Bidding $0 is fine too —
-          if fewer than {SLOTS_PER_MEAL} guests are wanted, you get a spot for free.
-        </p>
-        <Link href="/how-it-works" className="underline">More details</Link>
-      </Card>
       <Card>
-        <BidForm mealId={mealId} initial={existing} balance={balance} maxGuests={SLOTS_PER_MEAL} />
+        <BidForm
+          mealId={meal.id}
+          mealType={meal.type}
+          initial={existing}
+          balance={balance}
+          maxGuests={SLOTS_PER_MEAL}
+          weeksLeft={weeksLeft(quarter)}
+          history={history}
+        />
       </Card>
       {existing.length > 0 && (
         <form action={removeBidAction}>
-          <input type="hidden" name="mealId" value={mealId} />
+          <input type="hidden" name="mealId" value={meal.id} />
           <Button variant="danger" className="w-full">Remove my bid</Button>
         </form>
       )}

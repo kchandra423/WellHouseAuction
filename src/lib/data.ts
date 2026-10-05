@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { runAuction, trimToBudget } from "./auction";
-import { SLOTS_PER_MEAL, STARTING_BALANCE } from "./config";
+import { SLOTS_PER_MEAL, STARTING_BALANCE, type MealType } from "./config";
 import { compareMealIds, parseMealId, quarterFor, type Quarter } from "./time";
 
 export type Bid = { mealId: string; amounts: number[] };
@@ -145,6 +145,29 @@ export async function getClearedMealIds(): Promise<Set<string>> {
   const sql = await db();
   const rows = await sql`select meal_id from cleared_meals where not cancelled`;
   return new Set(rows.map((r) => r.meal_id));
+}
+
+export type PriceHistory = { meals: number; typical: number; low: number; high: number };
+
+/**
+ * What one guest spot cost at the last few meals of this type: the highest losing bid
+ * (what every one-guest winner paid), or $0 if there were spots to spare.
+ */
+export async function getRecentPrices(type: MealType, limit = 10): Promise<PriceHistory | null> {
+  const sql = await db();
+  const rows = await sql`
+    select meal_id, bid_amounts from results
+    where meal_id in (
+      select distinct meal_id from results where meal_id like ${"%-" + type}
+      order by meal_id desc limit ${limit}
+    )`;
+  const bidsByMeal = new Map<string, number[]>();
+  for (const r of rows) bidsByMeal.set(r.meal_id, [...(bidsByMeal.get(r.meal_id) ?? []), ...r.bid_amounts]);
+  const prices = [...bidsByMeal.values()]
+    .map((bids) => bids.sort((a, b) => b - a)[SLOTS_PER_MEAL] ?? 0)
+    .sort((a, b) => a - b);
+  if (!prices.length) return null;
+  return { meals: prices.length, typical: prices[Math.floor((prices.length - 1) / 2)], low: prices[0], high: prices.at(-1)! };
 }
 
 export async function getMyResults(email: string): Promise<Result[]> {
